@@ -52,20 +52,20 @@ function App() {
   return (
     <div className="app-container">
       {currentScreen === "landing" && (
-        <LandingScreen 
-          onNavigateWorkspace={navigateToWorkspace} 
+        <LandingScreen
+          onNavigateWorkspace={navigateToWorkspace}
           onNavigateScan={navigateToScan}
         />
       )}
       {currentScreen === "workspace" && (
-        <WorkspaceScreen 
-          onNavigateHome={navigateToLanding} 
+        <WorkspaceScreen
+          onNavigateHome={navigateToLanding}
           onNavigateScan={navigateToScan}
         />
       )}
       {currentScreen === "digital-twin" && (
-        <DigitalTwinScanScreen 
-          onBack={navigateToWorkspace} 
+        <DigitalTwinScanScreen
+          onBack={navigateToWorkspace}
           onFinishScan={(spaceData) => {
             console.log("Completed digital twin scan:", spaceData);
           }}

@@ -557,7 +557,7 @@ export default function DigitalTwinScanScreen({ onBack, onFinishScan }: DigitalT
                 <path d="M9 13a3 3 0 1 0 6 0 3 3 0 0 0-6 0" />
               </svg>
             </button>
-            <button 
+            <button
               className={`tool-btn ${torchOn ? 'active-torch' : ''}`}
               onClick={toggleTorch}
               aria-label="Flash / Torch"
@@ -604,15 +604,15 @@ export default function DigitalTwinScanScreen({ onBack, onFinishScan }: DigitalT
             <span className="detector-icon">{isMobileDevice ? '📱' : '💻'}</span>
             <span className="detector-text">
               {isMobileDevice
-                ? cameraActive 
-                  ? 'MOBILE DETECTED // HARDWARE CAMERA STREAMING' 
+                ? cameraActive
+                  ? 'MOBILE DETECTED // HARDWARE CAMERA STREAMING'
                   : 'MOBILE DETECTED // CAMERA READY'
                 : cameraActive
                   ? 'DESKTOP DETECTED // WEBCAM STREAMING'
                   : 'DESKTOP DETECTED // CAMERA READY'}
             </span>
             {!cameraActive && (
-              <button 
+              <button
                 className="btn-enable-cam"
                 onClick={() => startCamera('environment')}
                 title="Start live video stream"
