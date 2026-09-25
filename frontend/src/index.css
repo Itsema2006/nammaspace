@@ -10,8 +10,8 @@ html, body, #root {
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  background-color: #f4f3ec;
-  color: #1b2825;
+  background-color: #070a0f;
+  color: #f1f5f9;
   font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -26,3 +26,4 @@ a {
   color: inherit;
   text-decoration: none;
 }
+

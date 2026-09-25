@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import './WorkspaceScreen.css';
 import { listRecordedVideos, getRecordedVideo, type StoredScanVideo } from '../videoStorage';
 import ThreeDViewer from './ThreeDViewer';
+import AnalysisScreen from './AnalysisScreen.tsx';
 
 // SVG Icons matching the tactical spatial design language
 function HexagonLogoIcon() {
@@ -448,6 +449,100 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
     setActiveMenuId(null);
   };
 
+  // Export single space data to Excel (.csv)
+  const handleExportSingleSpaceExcel = (space: StoredSpaceItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const headers = [
+      "Space ID",
+      "Space Code",
+      "Title",
+      "Subtitle",
+      "Floors Count",
+      "Rooms Count",
+      "POIs Count",
+      "Model Size",
+      "Reconstruction Quality",
+      "Status",
+      "GPS Coordinates",
+      "Creation Date"
+    ];
+
+    const row = [
+      space.id,
+      space.code,
+      `"${space.title.replace(/"/g, '""')}"`,
+      `"${space.subtitle.replace(/"/g, '""')}"`,
+      space.floorCount,
+      space.roomCount,
+      space.poiCount,
+      `"${space.size}"`,
+      `"${space.quality}"`,
+      `"${space.status}"`,
+      `"${space.latLon.replace(/"/g, '""')}"`,
+      `"${space.createdAt}"`
+    ];
+
+    const csvContent = "\uFEFF" + [headers.join(","), row.join(",")].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const sanitizedTitle = (space.title || 'space').replace(/[^a-zA-Z0-9]/g, '_');
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Spatial_Space_${space.code}_${sanitizedTitle}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setActiveMenuId(null);
+  };
+
+  // Export all stored spaces to Excel (.csv)
+  const handleExportAllSpacesExcel = () => {
+    const headers = [
+      "Space ID",
+      "Space Code",
+      "Title",
+      "Subtitle",
+      "Floors Count",
+      "Rooms Count",
+      "POIs Count",
+      "Model Size",
+      "Reconstruction Quality",
+      "Status",
+      "GPS Coordinates",
+      "Creation Date"
+    ];
+
+    const rows = spaces.map((space) => [
+      space.id,
+      space.code,
+      `"${space.title.replace(/"/g, '""')}"`,
+      `"${space.subtitle.replace(/"/g, '""')}"`,
+      space.floorCount,
+      space.roomCount,
+      space.poiCount,
+      `"${space.size}"`,
+      `"${space.quality}"`,
+      `"${space.status}"`,
+      `"${space.latLon.replace(/"/g, '""')}"`,
+      `"${space.createdAt}"`
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const dateStr = new Date().toISOString().split("T")[0];
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Namma_Space_All_Spaces_Export_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handlePlayRecordedVideo = async (videoId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -498,6 +593,95 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
     }
     return true;
   });
+
+  // Export all scan activity history data to Excel (.csv) format
+  const handleExportActivityExcel = () => {
+    const logsToExport = filteredLogs.length > 0 ? filteredLogs : INITIAL_ACTIVITY_LOGS;
+
+    const headers = [
+      "Log ID",
+      "Capture Target Title",
+      "Facility / Subtitle",
+      "Operator Name",
+      "Operator Initials",
+      "Processing Pipeline",
+      "Payload Size",
+      "Confidence Score",
+      "Status",
+      "Category Type"
+    ];
+
+    const rows = logsToExport.map((log) => [
+      log.id,
+      `"${(log.title || '').replace(/"/g, '""')}"`,
+      `"${(log.subtitle || '').replace(/"/g, '""')}"`,
+      `"${(log.operatorName || '').replace(/"/g, '""')}"`,
+      `"${(log.operatorInitials || '').replace(/"/g, '""')}"`,
+      `"${(log.pipeline || '').replace(/"/g, '""')}"`,
+      `"${(log.payloadSize || '').replace(/"/g, '""')}"`,
+      `"${(log.confidence || '').replace(/"/g, '""')}"`,
+      `"${(log.status || '').replace(/"/g, '""')}"`,
+      `"${(log.type || '').toUpperCase()}"`
+    ]);
+
+    // UTF-8 BOM (\uFEFF) ensures Excel opens special characters and columns natively
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const dateStr = new Date().toISOString().split("T")[0];
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Spatial_Scan_Activity_History_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Export single scan activity row to Excel (.csv)
+  const handleExportSingleLogExcel = (log: ActivityLogItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const headers = [
+      "Log ID",
+      "Capture Target Title",
+      "Facility / Subtitle",
+      "Operator Name",
+      "Operator Initials",
+      "Processing Pipeline",
+      "Payload Size",
+      "Confidence Score",
+      "Status",
+      "Category Type"
+    ];
+
+    const row = [
+      log.id,
+      `"${(log.title || '').replace(/"/g, '""')}"`,
+      `"${(log.subtitle || '').replace(/"/g, '""')}"`,
+      `"${(log.operatorName || '').replace(/"/g, '""')}"`,
+      `"${(log.operatorInitials || '').replace(/"/g, '""')}"`,
+      `"${(log.pipeline || '').replace(/"/g, '""')}"`,
+      `"${(log.payloadSize || '').replace(/"/g, '""')}"`,
+      `"${(log.confidence || '').replace(/"/g, '""')}"`,
+      `"${(log.status || '').replace(/"/g, '""')}"`,
+      `"${(log.type || '').toUpperCase()}"`
+    ];
+
+    const csvContent = "\uFEFF" + [headers.join(","), row.join(",")].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const sanitizedTitle = (log.title || 'scan').replace(/[^a-zA-Z0-9]/g, '_');
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Scan_Log_${log.id}_${sanitizedTitle}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="workspace-app-layout">
@@ -551,14 +735,6 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
             <span className="nav-icon"><CaptureIcon /></span>
             <span className="nav-text">Capture & Sensors</span>
             <span className="nav-badge-pill green">42 Live</span>
-          </button>
-
-          <button
-            className={`sidebar-nav-item ${activeTab === 'docs' ? 'active' : ''}`}
-            onClick={() => setActiveTab('docs')}
-          >
-            <span className="nav-icon"><DocIcon /></span>
-            <span className="nav-text">Documentation</span>
           </button>
         </nav>
 
@@ -634,8 +810,12 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
 
         {/* Content Viewport */}
         <main className="workspace-content-area" onClick={() => setActiveMenuId(null)}>
-          {/* View Filter Pill Bar */}
-          <div className="workspace-filter-tabs-row">
+          {activeTab === 'analytics' ? (
+            <AnalysisScreen onBackToWorkspace={() => setActiveTab('workspace')} />
+          ) : (
+            <>
+              {/* View Filter Pill Bar */}
+              <div className="workspace-filter-tabs-row">
             <div className="filter-pills-left">
               <button className="pill-tab active">
                 <span className="pill-active-dot" />
@@ -714,8 +894,8 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                 <button className="btn-light-tactical" onClick={() => alert("Batch Sync triggered")}>
                   <RefreshIcon /> Batch Sync
                 </button>
-                <button className="btn-light-tactical" onClick={() => alert("Exporting all USDZ spatial archives...")}>
-                  <ExportIcon /> Export All USDZ
+                <button className="btn-light-tactical" onClick={handleExportAllSpacesExcel} title="Export all active spaces to Excel (.csv)">
+                  <ExportIcon /> Export Excel (.csv)
                 </button>
                 <button className="btn-dark-green" onClick={() => setIsCreateModalOpen(true)}>
                   <PlusIcon /> New Capture
@@ -886,6 +1066,9 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                           <button onClick={(e) => handleDuplicateSpace(space, e)}>
                             📋 Duplicate Space
                           </button>
+                          <button onClick={(e) => handleExportSingleSpaceExcel(space, e)}>
+                            📊 Export Excel (.csv)
+                          </button>
                           <button onClick={(e) => handleExportSpace(space, e)}>
                             📥 Export Telemetry (.json)
                           </button>
@@ -1046,8 +1229,8 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                   <span className="arrow-down">▾</span>
                 </div>
 
-                <button className="btn-dark-green-sm" onClick={() => alert("Exporting Activity Log CSV...")}>
-                  <ExportIcon /> Export CSV
+                <button className="btn-dark-green-sm" onClick={handleExportActivityExcel} title="Export scan activity history in Excel (.csv) format">
+                  <ExportIcon /> Export Excel (.csv)
                 </button>
               </div>
             </div>
@@ -1133,7 +1316,13 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                           <button className="btn-table-action" onClick={() => alert(`Inspecting ${log.title}...`)}>
                             👁 Inspect
                           </button>
-                          <button className="btn-table-icon" title="Download Log">📥</button>
+                          <button 
+                            className="btn-table-icon" 
+                            title="Export Log to Excel (.csv)"
+                            onClick={(e) => handleExportSingleLogExcel(log, e)}
+                          >
+                            📥
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1154,7 +1343,9 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
               </div>
             </div>
           </div>
-        </main>
+        </>
+      )}
+    </main>
 
         {/* Bottom System Status Bar */}
         <footer className="workspace-system-footer font-mono">
