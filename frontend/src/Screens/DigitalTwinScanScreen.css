@@ -1,0 +1,1306 @@
+/* ==========================================================================
+   DIGITAL TWIN / PHOTOGRAMMETRY SCAN SESSION SCREEN
+   ========================================================================== */
+
+.digital-twin-scan-app {
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  max-height: 100vh;
+  background-color: #03060a;
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ==========================================================================
+   0. REAL HARDWARE CAMERA VIDEO STREAM
+   ========================================================================== */
+
+.ar-camera-video-feed {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  z-index: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+  background-color: #03060a;
+}
+
+.ar-camera-video-feed.active {
+  opacity: 1;
+}
+
+.ar-camera-video-feed.mirror-feed {
+  transform: scaleX(-1);
+}
+
+/* ==========================================================================
+   1. 3D AR VIEWPORT & POINT CLOUD LAYER
+   ========================================================================== */
+
+.scan-viewport-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(circle at 50% 45%, #070d16 0%, #03060a 80%);
+  transition: background 0.3s ease;
+}
+
+.scan-viewport-layer.camera-live-active,
+.scan-viewport-layer.camera-underlay {
+  background: transparent;
+}
+
+.scan-viewport-layer.camera-live-active::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(3, 6, 10, 0.7) 0%, rgba(3, 6, 10, 0.05) 25%, rgba(3, 6, 10, 0.05) 70%, rgba(3, 6, 10, 0.85) 100%);
+  pointer-events: none;
+}
+
+.ar-pointcloud-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Center HUD Reticle */
+.center-reticle-wrap {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reticle-top-dot {
+  position: absolute;
+  top: -24px;
+  width: 6px;
+  height: 6px;
+  background-color: #38bdf8;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #38bdf8;
+}
+
+.reticle-cross-brackets {
+  width: 64px;
+  height: 64px;
+  position: relative;
+}
+
+.bracket {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: #ff7a45;
+  border-style: solid;
+}
+
+.bracket.tl { top: 0; left: 0; border-width: 2.5px 0 0 2.5px; }
+.bracket.tr { top: 0; right: 0; border-width: 2.5px 2.5px 0 0; }
+.bracket.bl { bottom: 0; left: 0; border-width: 0 0 2.5px 2.5px; }
+.bracket.br { bottom: 0; right: 0; border-width: 0 2.5px 2.5px 0; }
+
+.center-target-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid #ff7a45;
+  border-radius: 50%;
+  background-color: rgba(255, 122, 69, 0.15);
+}
+
+.reticle-horizontal-guide {
+  position: absolute;
+  width: 44px;
+  height: 1.5px;
+  background-color: #38bdf8;
+  opacity: 0.65;
+}
+
+.reticle-horizontal-guide.left { right: 80px; }
+.reticle-horizontal-guide.right { left: 80px; }
+
+/* Floating AR Bounding Labels */
+.ar-tag {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Wall North Tag */
+.tag-wall-north {
+  top: 24%;
+  left: 18%;
+  background-color: rgba(6, 16, 28, 0.85);
+  border: 1.5px solid #2563eb;
+  padding: 8px 12px;
+  border-radius: 4px;
+  box-shadow: 0 0 16px rgba(37, 99, 235, 0.3);
+}
+
+.tag-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tag-label { color: #60a5fa; letter-spacing: 0.5px; }
+.tag-dist { color: #f8fafc; font-size: 12px; }
+
+.tag-gauge-line {
+  height: 2px;
+  background-color: #38bdf8;
+  margin-top: 6px;
+  border-radius: 1px;
+}
+
+/* Plane Floor Tag */
+.tag-plane-floor {
+  bottom: 34%;
+  left: 14%;
+  background-color: rgba(6, 26, 20, 0.75);
+  border: 1.5px dashed #38e5ad;
+  padding: 8px 16px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 0 16px rgba(56, 229, 173, 0.2);
+}
+
+.plane-dot {
+  width: 6px;
+  height: 6px;
+  background-color: #38e5ad;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #38e5ad;
+}
+
+.plane-name { color: #38e5ad; letter-spacing: 0.5px; }
+.plane-confidence { color: #38e5ad; font-size: 10px; }
+
+/* Dynamic POI Markers */
+.ar-poi-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 90, 31, 0.9);
+  color: #ffffff;
+  padding: 4px 8px;
+  border-radius: 2px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 0 12px rgba(255, 90, 31, 0.6);
+  pointer-events: none;
+  animation: poi-pulse 2s infinite ease-in-out;
+}
+
+@keyframes poi-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.06); }
+}
+
+/* Elevation Ruler Bar */
+.elevation-ruler-bar {
+  position: absolute;
+  top: 14%;
+  right: 18px;
+  bottom: 30%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: #475569;
+  pointer-events: none;
+}
+
+.ruler-notch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ruler-notch::before {
+  content: '';
+  width: 8px;
+  height: 1px;
+  background-color: #334155;
+}
+
+.ruler-notch.highlight-green {
+  color: #38e5ad;
+  font-weight: 700;
+}
+.ruler-notch.highlight-green::before {
+  background-color: #38e5ad;
+  width: 12px;
+}
+
+.ruler-notch.highlight-orange {
+  color: #ff7a45;
+  font-weight: 700;
+  font-size: 11px;
+}
+.ruler-notch.highlight-orange::before {
+  background-color: #ff7a45;
+  width: 16px;
+  height: 2px;
+}
+
+/* Camera Permission / Activation Prompt Overlay */
+.camera-prompt-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 400px;
+  width: 90%;
+  pointer-events: auto;
+  animation: prompt-fade-in 0.3s ease;
+}
+
+@keyframes prompt-fade-in {
+  from { opacity: 0; transform: translate(-50%, -46%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+.btn-activate-camera-prompt {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(14, 30, 48, 0.9), rgba(6, 26, 20, 0.95));
+  border: 1.5px solid #38e5ad;
+  border-radius: 10px;
+  padding: 16px 20px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 0 30px rgba(56, 229, 173, 0.25);
+  transition: all 0.25s ease;
+}
+
+.btn-activate-camera-prompt:hover {
+  transform: translateY(-2px);
+  border-color: #38bdf8;
+  box-shadow: 0 0 40px rgba(56, 189, 248, 0.35);
+  background: linear-gradient(135deg, rgba(18, 42, 68, 0.95), rgba(10, 36, 28, 0.98));
+}
+
+.btn-activate-camera-prompt:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cam-prompt-icon {
+  font-size: 26px;
+  background: rgba(56, 229, 173, 0.15);
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 229, 173, 0.4);
+}
+
+.cam-prompt-text {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  gap: 3px;
+}
+
+.cam-prompt-text strong {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  color: #38e5ad;
+}
+
+.cam-prompt-text small {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+.camera-error-banner {
+  background: rgba(185, 28, 28, 0.25);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+  width: 100%;
+}
+
+/* ==========================================================================
+   2. HUD OVERLAYS & TOPBAR
+   ========================================================================== */
+
+.scan-hud-layer {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100vh;
+  padding: 16px 20px;
+  pointer-events: none;
+}
+
+.scan-hud-layer > * {
+  pointer-events: auto;
+}
+
+/* Topbar */
+.scan-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.btn-back-round {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background-color: rgba(14, 20, 30, 0.85);
+  border: 1px solid #1f2a3c;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+
+.btn-back-round:hover {
+  background-color: #1e293b;
+  border-color: #38bdf8;
+}
+
+.session-title-block {
+  text-align: center;
+}
+
+.session-type-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ff7a45;
+  letter-spacing: 1px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.session-main-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+.topbar-action-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tool-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background-color: rgba(14, 20, 30, 0.85);
+  border: 1px solid #1f2a3c;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+
+.tool-btn:hover {
+  background-color: #1e293b;
+  color: #ffffff;
+}
+
+.tool-btn.active-camera {
+  border-color: #38bdf8;
+  color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+.tool-btn.active-torch {
+  border-color: #facc15;
+  color: #facc15;
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.4);
+}
+
+/* Status Telemetry Badges */
+.scan-telemetry-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.pill-rec {
+  background-color: #2b0d10;
+  border: 1px solid #ff4d4f;
+  padding: 6px 12px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.rec-red-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #ff4d4f;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #ff4d4f;
+  animation: rec-blink 1.2s infinite ease-in-out;
+}
+
+@keyframes rec-blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.85); }
+}
+
+.rec-label { color: #ff7875; }
+.rec-timer { color: #ffffff; }
+
+.pill-status {
+  background-color: #0c1822;
+  border: 1px solid #1a2c3e;
+  padding: 6px 12px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: #38e5ad;
+}
+
+.fps-dot {
+  width: 6px;
+  height: 6px;
+  background-color: #38e5ad;
+  border-radius: 50%;
+}
+
+.pill-lidar {
+  color: #60a5fa;
+  border-color: #1e3a8a;
+  background-color: #0c1729;
+}
+
+.pill-lidar b { color: #93c5fd; }
+
+.pill-imu {
+  color: #94a3b8;
+  border-color: #242c38;
+  background-color: #0d121a;
+}
+
+/* Device Detector & Guidance Banners Stack */
+.guidance-banners-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 520px;
+}
+
+.device-detector-pill {
+  padding: 6px 14px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+}
+
+.device-detector-pill.mobile-mode {
+  background-color: rgba(12, 36, 25, 0.9);
+  border: 1px solid #166534;
+  color: #38e5ad;
+}
+
+.device-detector-pill.desktop-mode {
+  background-color: rgba(14, 22, 34, 0.9);
+  border: 1px solid #23344d;
+  color: #93c5fd;
+}
+
+.detector-icon { font-size: 13px; }
+
+.btn-enable-cam {
+  margin-left: auto;
+  background-color: #3b82f6;
+  border: none;
+  color: #ffffff;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 2px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.15s ease;
+}
+
+.btn-enable-cam:hover {
+  background-color: #60a5fa;
+  box-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
+}
+
+.guidance-banner {
+  padding: 8px 14px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+}
+
+.banner-locked {
+  background-color: rgba(12, 36, 25, 0.9);
+  border: 1px solid #166534;
+  color: #4ade80;
+}
+
+.banner-warning {
+  background-color: rgba(45, 15, 15, 0.9);
+  border: 1px solid #991b1b;
+  color: #fca5a5;
+}
+
+.banner-move {
+  background-color: rgba(14, 25, 39, 0.9);
+  border: 1px solid #1e3a8a;
+  color: #93c5fd;
+}
+
+.banner-icon.spin {
+  display: inline-block;
+  animation: banner-spin 3s linear infinite;
+}
+
+@keyframes banner-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   3. BOTTOM TELEMETRY & CAPTURE CONTROLS
+   ========================================================================== */
+
+.scan-bottom-controls-wrap {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: linear-gradient(180deg, transparent 0%, rgba(3, 6, 10, 0.85) 20%, #03060a 100%);
+  padding-top: 20px;
+}
+
+/* Coverage Progress Section */
+.coverage-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.coverage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.coverage-label { color: #94a3b8; letter-spacing: 0.8px; }
+.coverage-percentage { color: #38e5ad; font-size: 13px; }
+
+.coverage-bar-track {
+  height: 5px;
+  background-color: #111827;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.coverage-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8 0%, #38e5ad 100%);
+  border-radius: 3px;
+  box-shadow: 0 0 8px rgba(56, 229, 173, 0.6);
+  transition: width 0.3s ease;
+}
+
+/* Telemetry Metrics 3-Grid */
+.telemetry-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 10px;
+}
+
+.telemetry-box {
+  background-color: #0c1119;
+  border: 1px solid #1a2332;
+  border-radius: 4px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.t-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.5px;
+}
+
+.t-value {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.text-orange { color: #ff7a45; }
+.text-blue { color: #60a5fa; }
+.text-white { color: #f8fafc; }
+
+/* Tool Toggles Row */
+.tool-toggles-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.toggle-tool-btn {
+  background-color: #0e1520;
+  border: 1px solid #1f2d40;
+  color: #cbd5e1;
+  padding: 10px 12px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggle-tool-btn:hover {
+  background-color: #172233;
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.toggle-tool-btn.active {
+  background-color: #0c201a;
+  border-color: #38e5ad;
+  color: #38e5ad;
+}
+
+.btn-glyph { font-size: 12px; }
+
+/* Capture Action Shutter Bar */
+.capture-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+}
+
+.btn-pause-round {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #0e141f;
+  border: 1px solid #243247;
+  color: #ffffff;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-pause-round:hover {
+  background-color: #172233;
+  transform: scale(1.05);
+}
+
+.btn-shutter-outer {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background-color: transparent;
+  border: 3px solid #ff7a45;
+  box-shadow: 0 0 20px rgba(255, 122, 69, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  animation: shutter-glow 2s infinite ease-in-out;
+}
+
+@keyframes shutter-glow {
+  0%, 100% { box-shadow: 0 0 16px rgba(255, 122, 69, 0.3); }
+  50% { box-shadow: 0 0 28px rgba(255, 122, 69, 0.7); }
+}
+
+.btn-shutter-outer:hover {
+  transform: scale(1.06);
+}
+
+.shutter-inner-square {
+  width: 28px;
+  height: 28px;
+  background-color: #ff7a45;
+  border-radius: 4px;
+}
+
+.btn-done-pill {
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 22px;
+  background-color: #0c201a;
+  border: 1.5px solid #38e5ad;
+  color: #38e5ad;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-done-pill:hover {
+  background-color: #38e5ad;
+  color: #03060a;
+  box-shadow: 0 0 16px rgba(56, 229, 173, 0.5);
+  transform: scale(1.05);
+}
+
+/* ==========================================================================
+   4. PROCESSING RECONSTRUCTION OVERLAY
+   ========================================================================== */
+
+.scan-processing-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background-color: rgba(3, 6, 10, 0.95);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: modal-appear 0.3s ease;
+}
+
+.processing-dialog {
+  text-align: center;
+  max-width: 400px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.processing-spinner {
+  width: 56px;
+  height: 56px;
+  border: 3px solid rgba(56, 229, 173, 0.2);
+  border-top-color: #38e5ad;
+  border-radius: 50%;
+  animation: banner-spin 1s linear infinite;
+  box-shadow: 0 0 20px rgba(56, 229, 173, 0.3);
+}
+
+.processing-dialog h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+}
+
+.processing-dialog p {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: #8fa0b5;
+  line-height: 1.5;
+}
+
+.processing-progress-bar {
+  width: 100%;
+  height: 4px;
+  background-color: #111827;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.processing-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #38e5ad);
+  animation: progress-fill 2s ease-in-out infinite;
+}
+
+@keyframes progress-fill {
+  0% { width: 0%; transform: translateX(-100%); }
+  50% { width: 100%; transform: translateX(0); }
+  100% { width: 100%; transform: translateX(100%); }
+}
+
+@media (max-width: 700px) {
+  .scan-hud-layer {
+    padding: 12px;
+  }
+
+  .scan-topbar {
+    margin-bottom: 8px;
+  }
+
+  .session-type-tag {
+    font-size: 8px;
+    letter-spacing: 0.6px;
+  }
+
+  .session-main-name {
+    font-size: 13px;
+  }
+
+  .btn-back-round,
+  .tool-btn {
+    width: 42px;
+    height: 42px;
+  }
+
+  .topbar-action-tools {
+    gap: 6px;
+  }
+
+  .scan-telemetry-row {
+    gap: 6px;
+    max-width: calc(100% - 4px);
+  }
+
+  .pill-rec,
+  .pill-status {
+    padding: 5px 8px;
+    font-size: 9px;
+  }
+
+  .guidance-banners-stack {
+    width: 100%;
+    max-width: none;
+  }
+
+  .device-detector-pill,
+  .guidance-banner {
+    padding: 7px 10px;
+    font-size: 9px;
+  }
+
+  .device-detector-pill {
+    flex-wrap: wrap;
+  }
+
+  .detector-text {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .btn-enable-cam {
+    margin-left: auto;
+    min-height: 30px;
+  }
+
+  .tag-wall-north {
+    top: 22%;
+    left: 8%;
+    padding: 6px 8px;
+  }
+
+  .tag-plane-floor,
+  .elevation-ruler-bar {
+    display: none;
+  }
+
+  .ar-poi-marker {
+    font-size: 8px;
+    padding: 4px 6px;
+  }
+
+  .camera-prompt-overlay {
+    width: calc(100% - 32px);
+    max-width: 360px;
+  }
+
+  .btn-activate-camera-prompt {
+    padding: 13px 14px;
+    gap: 10px;
+  }
+
+  .cam-prompt-icon {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    font-size: 22px;
+  }
+
+  .scan-bottom-controls-wrap {
+    gap: 10px;
+    padding-top: 14px;
+  }
+
+  .telemetry-metrics-grid,
+  .tool-toggles-row {
+    gap: 6px;
+  }
+
+  .telemetry-box {
+    padding: 7px 8px;
+  }
+
+  .t-label {
+    font-size: 8px;
+  }
+
+  .t-value {
+    font-size: 12px;
+  }
+
+  .toggle-tool-btn {
+    min-height: 42px;
+    padding: 8px 4px;
+    gap: 4px;
+    font-size: 8px;
+  }
+
+  .btn-pause-round {
+    width: 46px;
+    height: 46px;
+  }
+
+  .btn-shutter-outer {
+    width: 64px;
+    height: 64px;
+  }
+
+  .btn-done-pill {
+    height: 42px;
+    padding: 0 14px;
+    font-size: 10px;
+  }
+
+}
+
+@media (max-width: 380px) {
+  .session-type-tag,
+  .pill-status.pill-imu,
+  .device-detector-pill {
+    display: none;
+  }
+
+  .scan-telemetry-row {
+    margin-top: 8px;
+  }
+
+  .telemetry-metrics-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .toggle-tool-btn span:last-child {
+    display: none;
+  }
+}
+
+@media (max-height: 640px) and (max-width: 700px) {
+  .scan-hud-layer {
+    padding: 8px 10px;
+  }
+
+  .guidance-banners-stack {
+    display: none;
+  }
+
+  .scan-bottom-controls-wrap {
+    gap: 7px;
+    padding-top: 8px;
+  }
+
+  .coverage-section {
+    gap: 3px;
+  }
+}
+
+@media (max-width: 700px) {
+  .digital-twin-scan-app {
+    min-height: 100svh;
+    height: 100svh;
+  }
+
+  .scan-hud-layer {
+    min-height: 100svh;
+    height: 100svh;
+    padding: 12px 12px 14px;
+  }
+
+  .scan-topbar {
+    margin-bottom: 8px;
+  }
+
+  .session-type-tag {
+    font-size: 8px;
+  }
+
+  .session-main-name {
+    font-size: 13px;
+  }
+
+  .btn-back-round,
+  .tool-btn {
+    width: 42px;
+    height: 42px;
+  }
+
+  .topbar-action-tools {
+    gap: 6px;
+  }
+
+  .scan-telemetry-row {
+    gap: 6px;
+    max-width: calc(100% - 4px);
+  }
+
+  .pill-rec,
+  .pill-status {
+    padding: 5px 8px;
+    font-size: 9px;
+  }
+
+  .guidance-banners-stack {
+    max-width: 100%;
+    gap: 6px;
+  }
+
+  .device-detector-pill,
+  .guidance-banner {
+    padding: 7px 9px;
+    font-size: 9px;
+  }
+
+  .device-detector-pill {
+    flex-wrap: wrap;
+  }
+
+  .detector-text {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .btn-enable-cam {
+    margin-left: auto;
+    min-height: 30px;
+  }
+
+  .tag-wall-north {
+    top: 23%;
+    left: 8%;
+    padding: 6px 8px;
+    font-size: 9px;
+  }
+
+  .tag-plane-floor {
+    bottom: 35%;
+    left: 7%;
+    gap: 6px;
+    padding: 6px 8px;
+    font-size: 9px;
+  }
+
+  .plane-confidence {
+    display: none;
+  }
+
+  .elevation-ruler-bar {
+    right: 8px;
+    top: 25%;
+    bottom: 34%;
+    font-size: 8px;
+  }
+
+  .camera-prompt-overlay {
+    max-width: none;
+    width: calc(100% - 32px);
+  }
+
+  .btn-activate-camera-prompt {
+    padding: 13px 14px;
+    gap: 10px;
+  }
+
+  .cam-prompt-icon {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+  }
+
+  .cam-prompt-text strong {
+    font-size: 11px;
+  }
+
+  .cam-prompt-text small {
+    font-size: 10px;
+  }
+
+  .scan-bottom-controls-wrap {
+    gap: 9px;
+    padding-top: 12px;
+  }
+
+  .telemetry-metrics-grid,
+  .tool-toggles-row {
+    gap: 6px;
+  }
+
+  .telemetry-box {
+    padding: 7px 8px;
+  }
+
+  .t-label {
+    font-size: 8px;
+  }
+
+  .t-value {
+    font-size: 12px;
+  }
+
+  .toggle-tool-btn {
+    min-height: 42px;
+    padding: 8px 5px;
+    gap: 4px;
+    font-size: 8px;
+  }
+
+  .btn-pause-round {
+    width: 46px;
+    height: 46px;
+  }
+
+  .btn-shutter-outer {
+    width: 62px;
+    height: 62px;
+  }
+
+  .shutter-inner-square {
+    width: 23px;
+    height: 23px;
+  }
+
+  .btn-done-pill {
+    height: 42px;
+    padding: 0 14px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .scan-hud-layer {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .session-type-tag {
+    display: none;
+  }
+
+  .session-main-name {
+    font-size: 11px;
+  }
+
+  .pill-imu {
+    display: none;
+  }
+
+  .toggle-tool-btn {
+    font-size: 0;
+  }
+
+  .toggle-tool-btn .btn-glyph {
+    font-size: 16px;
+  }
+}
