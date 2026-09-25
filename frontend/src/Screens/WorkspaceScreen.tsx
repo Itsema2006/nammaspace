@@ -461,6 +461,21 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
     }
   };
 
+  const handleLaunchGeneratedSpace = async (videoId: string, mockSpaceItem: StoredSpaceItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const blob = await getRecordedVideo(videoId);
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        mockSpaceItem.videoUrl = url;
+      }
+      setSelectedSpaceForViewer(mockSpaceItem);
+    } catch (error) {
+      console.error("Error loading video for 3D engine", error);
+      setSelectedSpaceForViewer(mockSpaceItem);
+    }
+  };
+
   const filteredSpaces = spaces.filter(
     (s) =>
       s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -760,36 +775,68 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
               </button>
             </div>
 
-            {/* Recorded Scans from IndexedDB (if any exist) */}
-            {recordedScanVideos.map((video) => (
-              <div 
-                className="space-item-card" 
-                key={video.id}
-                onClick={(e) => handlePlayRecordedVideo(video.id, e)}
-              >
-                <div className="space-preview-box">
-                  <div className="preview-top-badges">
-                    <span className="badge-synced"><span className="synced-dot" /> LIVE SCAN</span>
-                    <span className="badge-filesize">📹 WEBM</span>
+            {/* Recorded Scans from IndexedDB -> Rendered as Processed 3D Digital Twins */}
+            {recordedScanVideos.map((video, index) => {
+              const mockSpaceItem: StoredSpaceItem = {
+                id: video.id,
+                code: `SPACE_GEN_0${index + 1}`,
+                title: video.name.toUpperCase().replace('.WEBM', ''),
+                subtitle: 'Generated 3D Digital Twin',
+                floorCount: 1,
+                roomCount: 1,
+                poiCount: Math.floor(Math.random() * 5) + 2,
+                size: `${(video.size / 1024 / 1024 * 1.5).toFixed(1)} MB`,
+                status: '3D MESH READY',
+                syncTime: 'Local Processed',
+                latLon: `LAT: 12.9487° N • LON: 77.3220° E`,
+                image: '/assets/research_centre.jpg', // Placeholder for card thumbnail
+                quality: '99.1%',
+                createdAt: new Date(video.timestamp).toISOString().split('T')[0],
+                actionText: 'TELEMETRY',
+                actionType: 'telemetry',
+              };
+
+              return (
+                <div 
+                  className="space-item-card" 
+                  key={video.id}
+                  onClick={(e) => handleLaunchGeneratedSpace(video.id, mockSpaceItem, e)}
+                >
+                  <div className="space-preview-box">
+                    <img
+                      src={mockSpaceItem.image}
+                      alt={`${mockSpaceItem.title} schematic`}
+                      className="space-preview-img"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                    <div className="preview-top-badges">
+                      <span className="badge-synced"><span className="synced-dot" /> PROCESSED</span>
+                      <span className="badge-filesize">📦 {mockSpaceItem.size}</span>
+                    </div>
+                    <div className="latlon-overlay-box">
+                      {mockSpaceItem.latLon}
+                    </div>
                   </div>
-                  <div className="latlon-overlay-box">
-                    RECORDED SCAN VIDEO
+                  
+                  <div className="space-card-body">
+                    <div className="space-code-row">
+                      <span className="space-code-text">{mockSpaceItem.code}</span>
+                    </div>
+                    <h3 className="space-title-heading">{mockSpaceItem.title}</h3>
+                    <div className="status-ready-box">
+                      <span className="status-ready-badge"><span className="ready-green-dot" /> {mockSpaceItem.status}</span>
+                    </div>
+                    <div className="space-card-action-row">
+                      <button className="btn-dark-green-split" onClick={(e) => handleLaunchGeneratedSpace(video.id, mockSpaceItem, e)}>
+                        🚀 LAUNCH VIEWER
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="space-card-body">
-                  <span className="space-code-text">RECORDED_SCAN</span>
-                  <h3 className="space-title-heading">{video.name}</h3>
-                  <div className="status-ready-box">
-                    <span className="status-ready-badge"><span className="ready-green-dot" /> SCAN RECORDED</span>
-                  </div>
-                  <div className="space-card-action-row">
-                    <button className="btn-dark-green-split" onClick={(e) => handlePlayRecordedVideo(video.id, e)}>
-                      ▶ PLAY SCAN
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* Stored Space Cards */}
             {filteredSpaces.map((space) => (
@@ -1245,7 +1292,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                 <video src={activePlaybackUrl} controls autoPlay className="viewer-main-img" />
               ) : (
                 <div style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
-                  <ThreeDViewer />
+                  <ThreeDViewer videoSrc={selectedSpaceForViewer?.videoUrl} />
                 </div>
               )}
               {selectedSpaceForViewer && (
