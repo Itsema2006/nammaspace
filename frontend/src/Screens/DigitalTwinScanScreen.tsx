@@ -435,20 +435,35 @@ export default function DigitalTwinScanScreen({ onBack, onFinishScan }: DigitalT
     setPoiPins([...poiPins, newPOI]);
     setSpatialNodes((prev) => prev + 25);
   };
+  const [processingPhase, setProcessingPhase] = useState<string>('Synthesizing Space...');
 
   const handleFinish = () => {
     setIsRecording(false);
     setIsDoneProcessing(true);
     stopCamera();
+
+    // Simulate Phase 1: Frame Extraction
+    setProcessingPhase('Extracting Spatial Frames...');
+    
     setTimeout(() => {
-      onFinishScan?.({
-        name: 'ROOM_014 // RECONSTRUCTED',
-        nodes: spatialNodes,
-        keyframes: keyframes,
-        quality: '99.2%',
-      });
-      onBack?.();
-    }, 2000);
+      // Simulate Phase 2: COLMAP / Point Cloud
+      setProcessingPhase('Generating Sparse Point Cloud...');
+      
+      setTimeout(() => {
+        // Simulate Phase 3: Mesh & Optimization
+        setProcessingPhase('Optimizing 3D Photorealistic Mesh...');
+        
+        setTimeout(() => {
+          onFinishScan?.({
+            name: 'ROOM_014 // RECONSTRUCTED',
+            nodes: spatialNodes,
+            keyframes: keyframes,
+            quality: '99.2%',
+          });
+          onBack?.();
+        }, 3000);
+      }, 3500);
+    }, 2500);
   };
 
   const handleStartRecording = async () => {
@@ -752,8 +767,11 @@ export default function DigitalTwinScanScreen({ onBack, onFinishScan }: DigitalT
         <div className="scan-processing-overlay">
           <div className="processing-dialog">
             <div className="processing-spinner" />
-            <h2>GENERATING DIGITAL TWIN</h2>
-            <p>Synthesizing 4K NeRF volumetric mesh &amp; point cloud...</p>
+            <h2>{processingPhase}</h2>
+            <p>
+              Pipeline: Computer Vision & Photogrammetry<br/>
+              Aligning Point Cloud with Device Sensor Data.
+            </p>
             <div className="processing-progress-bar">
               <div className="processing-progress-fill" />
             </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './WorkspaceScreen.css';
 import { listRecordedVideos, getRecordedVideo, type StoredScanVideo } from '../videoStorage';
+import ThreeDViewer from './ThreeDViewer';
 
 // SVG Icons matching the tactical spatial design language
 function HexagonLogoIcon() {
@@ -1243,11 +1244,9 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
               {activePlaybackUrl ? (
                 <video src={activePlaybackUrl} controls autoPlay className="viewer-main-img" />
               ) : (
-                <img 
-                  src={selectedSpaceForViewer?.image} 
-                  alt={selectedSpaceForViewer?.title} 
-                  className="viewer-main-img" 
-                />
+                <div style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
+                  <ThreeDViewer />
+                </div>
               )}
               {selectedSpaceForViewer && (
                 <div className="viewer-overlay-hud font-mono">
