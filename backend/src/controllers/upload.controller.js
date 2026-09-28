@@ -1,50 +1,33 @@
 const Project = require('../models/Project');
+const path = require('path');
 
-// @desc    Upload video for a project
-// @route   POST /api/projects/:id/upload
-// @access  Private
-const uploadVideo = async (req, res, next) => {
+exports.uploadVideo = async (req, res) => {
   try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Please upload a video file' });
+    }
+
     const projectId = req.params.id;
     
-    // Check if project exists and belongs to user
-    const project = await Project.findById(projectId);
+    // Verify project ownership
+    const project = await Project.findOne({ _id: projectId, userId: req.user._id });
     
     if (!project) {
-      res.status(404);
-      throw new Error('Project not found');
-    }
-    
-    if (project.userId.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to upload to this project');
+      return res.status(404).json({ error: 'Project not found or unauthorized' });
     }
 
-    if (!req.file) {
-      res.status(400);
-      throw new Error('Please upload a video file');
-    }
-
-    // Update project with video URL/path and new status
-    project.videoUrl = req.file.path;
+    // Update project with video URL/path and status
+    const videoUrl = path.join(req.file.destination, req.file.filename);
+    project.videoUrl = videoUrl;
     project.status = 'uploaded';
-    project.progress = 10;
-    project.currentStage = 'uploading';
     
     await project.save();
 
-    console.log(`[UPLOAD] Video uploaded for project ${projectId} at ${req.file.path}`);
-
     res.json({
-      success: true,
       message: 'Video uploaded successfully',
       project
     });
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
-};
-
-module.exports = {
-  uploadVideo
 };

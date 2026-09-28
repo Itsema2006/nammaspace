@@ -1,28 +1,27 @@
 const multer = require('multer');
 const path = require('path');
-const crypto = require('crypto');
-const { getProjectUploadDir } = require('../services/storage.service');
+const fs = require('fs');
 
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    if (!req.params.id) {
-      return cb(new Error('Project ID is missing'), false);
-    }
-    const uploadPath = getProjectUploadDir(req.params.id);
-    cb(null, uploadPath);
+  destination: (req, file, cb) => {
+    const projectId = req.params.id;
+    const dir = path.join(process.env.UPLOAD_DIR || './uploads', projectId, 'source');
+    
+    // Create directory if it doesn't exist
+    fs.mkdirSync(dir, { recursive: true });
+    
+    cb(null, dir);
   },
-  filename: function (req, file, cb) {
-    // Generate safe filename: randomHex + original extension
-    const randomHex = crypto.randomBytes(8).toString('hex');
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${randomHex}${ext}`);
+  filename: (req, file, cb) => {
+    // Keep original extension
+    const ext = path.extname(file.originalname);
+    cb(null, `video${ext}`);
   }
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedMimeTypes = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-matroska'];
-  
-  if (allowedMimeTypes.includes(file.mimetype)) {
+  const allowedMimes = ['video/mp4', 'video/quicktime', 'video/webm'];
+  if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
     cb(new Error('Invalid file type. Only MP4, MOV, and WebM are allowed.'), false);
@@ -30,11 +29,11 @@ const fileFilter = (req, file, cb) => {
 };
 
 const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
+  storage,
   limits: {
-    fileSize: (process.env.MAX_VIDEO_SIZE_MB || 500) * 1024 * 1024 // e.g., 500MB
-  }
+    fileSize: (process.env.MAX_VIDEO_SIZE_MB || 1000) * 1024 * 1024,
+  },
+  fileFilter
 });
 
 module.exports = upload;

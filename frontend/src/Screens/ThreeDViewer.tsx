@@ -1,6 +1,6 @@
 import React, { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment, Grid, Points, PointMaterial } from '@react-three/drei';
+import { OrbitControls, Environment, Grid, Points, PointMaterial, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
 // A procedural, interactive "Digital Twin" point cloud 
@@ -86,47 +86,19 @@ function WireframeBuilding() {
   );
 }
 
-function ScannedVideoMesh({ videoSrc }: { videoSrc: string }) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const videoTexture = useMemo(() => {
-    const video = document.createElement('video');
-    video.src = videoSrc;
-    video.crossOrigin = 'Anonymous';
-    video.loop = true;
-    video.muted = true;
-    video.play();
-    return new THREE.VideoTexture(video);
-  }, [videoSrc]);
-
-  useFrame((state) => {
-    if (meshRef.current) {
-      // Gentle floating animation
-      meshRef.current.position.y = 4 + Math.sin(state.clock.elapsedTime) * 0.5;
-    }
-  });
-
+function ActualModelMesh({ modelUrl }: { modelUrl: string }) {
+  // Try to load the GLTF/GLB model from the provided URL
+  // If no real model URL is provided, it will fallback to the wireframe or throw.
+  const { scene } = useGLTF(modelUrl || '/placeholder.glb');
+  
   return (
-    <group position={[0, 4, 0]}>
-      {/* Central Screen showing the extracted texture */}
-      <mesh ref={meshRef}>
-        <cylinderGeometry args={[15, 15, 12, 32, 1, true, 0, Math.PI]} />
-        <meshBasicMaterial map={videoTexture} side={THREE.DoubleSide} transparent opacity={0.85} />
-      </mesh>
-      
-      {/* Abstract structural beams around the video mesh */}
-      <mesh position={[0, -6, 0]}>
-        <cylinderGeometry args={[16, 16, 0.5, 32, 1, true, 0, Math.PI]} />
-        <meshBasicMaterial color="#38e5ad" wireframe />
-      </mesh>
-      <mesh position={[0, 6, 0]}>
-        <cylinderGeometry args={[16, 16, 0.5, 32, 1, true, 0, Math.PI]} />
-        <meshBasicMaterial color="#38e5ad" wireframe />
-      </mesh>
+    <group position={[0, 0, 0]}>
+      <primitive object={scene} scale={1} />
     </group>
   );
 }
 
-export default function ThreeDViewer({ videoSrc }: { videoSrc?: string }) {
+export default function ThreeDViewer({ videoSrc, modelUrl }: { videoSrc?: string, modelUrl?: string }) {
   return (
     <div style={{ width: '100%', height: '100%', backgroundColor: '#070a0e', position: 'relative' }}>
       <Canvas camera={{ position: [25, 20, 25], fov: 45 }}>
@@ -135,8 +107,17 @@ export default function ThreeDViewer({ videoSrc }: { videoSrc?: string }) {
         <ambientLight intensity={0.5} />
         <directionalLight position={[10, 10, 5]} intensity={1.5} />
         
-        <SpatialPointCloud />
-        {videoSrc ? <ScannedVideoMesh videoSrc={videoSrc} /> : <WireframeBuilding />}
+        {/* Render the actual photogrammetry model if provided, else fallback to wireframe/point cloud */}
+        {modelUrl ? (
+          <React.Suspense fallback={<SpatialPointCloud />}>
+            <ActualModelMesh modelUrl={modelUrl} />
+          </React.Suspense>
+        ) : (
+          <>
+            <SpatialPointCloud />
+            <WireframeBuilding />
+          </>
+        )}
         
         <Grid 
           infiniteGrid 

@@ -2,6 +2,7 @@ export interface StoredScanVideo {
   id: string;
   name: string;
   createdAt: string;
+  size?: number;
 }
 
 interface StoredScanVideoRecord extends StoredScanVideo {

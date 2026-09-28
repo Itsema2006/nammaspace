@@ -1,13 +1,17 @@
+require('dotenv').config();
 const http = require('http');
 const app = require('./app');
-const connectDB = require('./config/db');
-const env = require('./config/env');
+const connectDB = require('./config/database');
 
-// Connect to MongoDB
-connectDB();
+const PORT = process.env.PORT || 5000;
 
 const server = http.createServer(app);
 
-server.listen(env.port, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${env.port}`);
+connectDB().then(() => {
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}).catch(err => {
+  console.error('Failed to connect to database', err);
+  process.exit(1);
 });

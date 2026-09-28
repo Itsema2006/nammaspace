@@ -449,6 +449,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
     setActiveMenuId(null);
   };
 
+
   // Export single space data to Excel (.csv)
   const handleExportSingleSpaceExcel = (space: StoredSpaceItem, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -568,6 +569,38 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
     } catch (error) {
       console.error("Error loading video for 3D engine", error);
       setSelectedSpaceForViewer(mockSpaceItem);
+    }
+  };
+
+  const handleGenerate3DMap = async (videoId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const blob = await getRecordedVideo(videoId);
+      if (!blob) {
+        alert("Video not found!");
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('project_id', videoId);
+      formData.append('video', blob, 'recorded_video.mp4');
+
+      alert("Starting 3D Map generation in the background. Check backend terminal for progress!");
+
+      const response = await fetch('http://localhost:8000/reconstruct/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        console.log("3D Reconstruction started successfully", data);
+      } else {
+        alert("Failed to start 3D reconstruction");
+      }
+    } catch (error) {
+      console.error("Error generating 3D map", error);
+      alert("Error connecting to backend for 3D reconstruction");
     }
   };
 
@@ -965,13 +998,13 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                 floorCount: 1,
                 roomCount: 1,
                 poiCount: Math.floor(Math.random() * 5) + 2,
-                size: `${(video.size / 1024 / 1024 * 1.5).toFixed(1)} MB`,
+                size: `${(((video.size || 0) / 1024 / 1024) * 1.5).toFixed(1)} MB`,
                 status: '3D MESH READY',
                 syncTime: 'Local Processed',
                 latLon: `LAT: 12.9487° N • LON: 77.3220° E`,
                 image: '/assets/research_centre.jpg', // Placeholder for card thumbnail
                 quality: '99.1%',
-                createdAt: new Date(video.timestamp).toISOString().split('T')[0],
+                createdAt: new Date(video.createdAt).toISOString().split('T')[0],
                 actionText: 'TELEMETRY',
                 actionType: 'telemetry',
               };
@@ -1008,7 +1041,10 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                     <div className="status-ready-box">
                       <span className="status-ready-badge"><span className="ready-green-dot" /> {mockSpaceItem.status}</span>
                     </div>
-                    <div className="space-card-action-row">
+                    <div className="space-card-action-row" style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+                      <button className="btn-dark-green-split" onClick={(e) => handleGenerate3DMap(video.id, e)}>
+                        🛠️ GENERATE 3D MAP
+                      </button>
                       <button className="btn-dark-green-split" onClick={(e) => handleLaunchGeneratedSpace(video.id, mockSpaceItem, e)}>
                         🚀 LAUNCH VIEWER
                       </button>
@@ -1483,7 +1519,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                 <video src={activePlaybackUrl} controls autoPlay className="viewer-main-img" />
               ) : (
                 <div style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
-                  <ThreeDViewer videoSrc={selectedSpaceForViewer?.videoUrl} />
+                  <ThreeDViewer modelUrl={selectedSpaceForViewer?.modelUrl} videoSrc={selectedSpaceForViewer?.videoUrl} />
                 </div>
               )}
               {selectedSpaceForViewer && (

@@ -1,91 +1,43 @@
 const Project = require('../models/Project');
 
-// @desc    Create a project
-// @route   POST /api/projects
-// @access  Private
-const createProject = async (req, res, next) => {
+exports.createProject = async (req, res) => {
   try {
-    const { name, description } = req.body;
-    
-    if (!name) {
-      res.status(400);
-      throw new Error('Project name is required');
-    }
-
     const project = await Project.create({
+      ...req.body,
       userId: req.user._id,
-      name,
-      description
+      status: 'created'
     });
-
     res.status(201).json(project);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 };
 
-// @desc    Get all projects for a user
-// @route   GET /api/projects
-// @access  Private
-const getProjects = async (req, res, next) => {
+exports.getProjects = async (req, res) => {
   try {
-    const projects = await Project.find({ userId: req.user._id }).sort({ createdAt: -1 });
+    const projects = await Project.find({ userId: req.user._id });
     res.json(projects);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 };
 
-// @desc    Get a specific project
-// @route   GET /api/projects/:id
-// @access  Private
-const getProjectById = async (req, res, next) => {
+exports.getProjectById = async (req, res) => {
   try {
-    const project = await Project.findById(req.params.id);
-    
-    if (!project) {
-      res.status(404);
-      throw new Error('Project not found');
-    }
-    
-    if (project.userId.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to access this project');
-    }
-
+    const project = await Project.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!project) return res.status(404).json({ error: 'Project not found' });
     res.json(project);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 };
 
-// @desc    Delete a project
-// @route   DELETE /api/projects/:id
-// @access  Private
-const deleteProject = async (req, res, next) => {
+exports.deleteProject = async (req, res) => {
   try {
-    const project = await Project.findById(req.params.id);
-    
-    if (!project) {
-      res.status(404);
-      throw new Error('Project not found');
-    }
-    
-    if (project.userId.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to delete this project');
-    }
-
-    await project.deleteOne();
+    const project = await Project.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+    if (!project) return res.status(404).json({ error: 'Project not found' });
     res.json({ message: 'Project removed' });
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
-};
-
-module.exports = {
-  createProject,
-  getProjects,
-  getProjectById,
-  deleteProject
 };
