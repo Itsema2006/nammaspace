@@ -330,6 +330,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
   // Recorded scans from videoStorage
   const [recordedScanVideos, setRecordedScanVideos] = useState<StoredScanVideo[]>([]);
   const [activePlaybackUrl, setActivePlaybackUrl] = useState<string | null>(null);
+  const [reconstructedModels, setReconstructedModels] = useState<Record<string, string>>({});
 
   // Form states for creating new space
   const [newSpaceName, setNewSpaceName] = useState('');
@@ -586,16 +587,33 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
       formData.append('project_id', videoId);
       formData.append('video', blob, 'recorded_video.mp4');
 
-      alert("Starting 3D Map generation in the background. Check backend terminal for progress!");
+      alert("3D reconstruction started. This can take several minutes.");
 
-      const response = await fetch('http://localhost:8000/reconstruct/upload', {
+      const response = await fetch('/reconstruct/upload', {
         method: 'POST',
         body: formData,
       });
 
       const data = await response.json();
       if (data.success) {
-        console.log("3D Reconstruction started successfully", data);
+        let status = 'queued';
+        while (status === 'queued' || status === 'processing') {
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+          const statusResponse = await fetch(`/reconstruct/${videoId}/status`);
+          const statusData = await statusResponse.json();
+          status = statusData.status;
+
+          if (status === 'completed' && statusData.asset?.modelUrl) {
+            const modelUrl = new URL(statusData.asset.modelUrl, window.location.origin).toString();
+            setReconstructedModels((models) => ({ ...models, [videoId]: modelUrl }));
+            alert("3D reconstruction complete. Launch the reconstructed scene.");
+            return;
+          }
+
+          if (status === 'failed') {
+            throw new Error(statusData.error || '3D reconstruction failed');
+          }
+        }
       } else {
         alert("Failed to start 3D reconstruction");
       }
@@ -1000,7 +1018,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                 roomCount: 1,
                 poiCount: Math.floor(Math.random() * 5) + 2,
                 size: `${(((video.size || 0) / 1024 / 1024) * 1.5).toFixed(1)} MB`,
-                status: '3D MESH READY',
+                status: reconstructedModels[video.id] ? '3D MESH READY' : 'RECONSTRUCTION REQUIRED',
                 syncTime: 'Local Processed',
                 latLon: `LAT: 12.9487° N • LON: 77.3220° E`,
                 image: '/assets/research_centre.jpg', // Placeholder for card thumbnail
@@ -1008,6 +1026,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                 createdAt: new Date(video.createdAt).toISOString().split('T')[0],
                 actionText: 'TELEMETRY',
                 actionType: 'telemetry',
+                modelUrl: reconstructedModels[video.id],
               };
 
               return (
