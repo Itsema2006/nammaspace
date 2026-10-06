@@ -13,7 +13,7 @@ const connection = {
 };
 
 const worker = new Worker('reconstruction', async job => {
-  const { projectId, jobId, videoPath } = job.data;
+  const { projectId, jobId, videoPath, outputDir } = job.data;
   console.log(`[WORKER] Processing started for job ${jobId}, project ${projectId}`);
 
   try {
@@ -23,11 +23,25 @@ const worker = new Worker('reconstruction', async job => {
 
     // 2. Call the Python Service
     console.log(`[WORKER] Calling Python Service for project ${projectId}...`);
-    const pythonResponse = await startPythonReconstruction(jobId, projectId, videoPath);
+    const pythonResponse = await startPythonReconstruction(jobId, projectId, videoPath, outputDir);
     console.log(`[WORKER] Python service accepted job:`, pythonResponse);
 
-    // Note: In a real architecture, the Python service would update progress via a webhook or directly to Redis/DB.
-    // For now, this just fires and logs. The rest of the pipeline progress is handled by webhooks/sockets.
+    const asset = pythonResponse.asset || {};
+    await ReconstructionJob.findByIdAndUpdate(jobId, {
+      status: 'completed',
+      progress: 100,
+      currentStage: 'completed',
+      outputPath: asset.modelUrl || asset.pointCloudUrl,
+      completedAt: new Date()
+    });
+    await Project.findByIdAndUpdate(projectId, {
+      status: 'completed',
+      progress: 100,
+      currentStage: 'completed',
+      modelUrl: asset.modelUrl || null,
+      previewUrl: asset.previewUrl || null,
+      reconstructionMetadata: asset.metadata || null
+    });
 
   } catch (error) {
     console.error(`[WORKER] Job ${jobId} failed:`, error.message);

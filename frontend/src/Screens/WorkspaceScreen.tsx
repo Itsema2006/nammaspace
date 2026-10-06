@@ -185,6 +185,7 @@ export interface StoredSpaceItem {
   actionText?: string;
   actionType?: 'telemetry' | 'wayfinding' | 'inspect';
   videoUrl?: string;
+  modelUrl?: string;
 }
 
 const DEFAULT_STORED_SPACES: StoredSpaceItem[] = [
@@ -377,8 +378,8 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
   // Aggregate telemetry stats from stored work
   const metrics = useMemo(() => {
     const totalSpaces = spaces.length + recordedScanVideos.length;
-    const totalFloors = spaces.reduce((acc, s) => acc + s.floorCount, 0);
-    const totalPOIs = spaces.reduce((acc, s) => acc + s.poiCount, 0);
+    const totalFloors = spaces.reduce((acc: any, s: { floorCount: any; }) => acc + s.floorCount, 0);
+    const totalPOIs = spaces.reduce((acc: any, s: { poiCount: any; }) => acc + s.poiCount, 0);
     return {
       activeSpaces: String(totalSpaces).padStart(2, '0'),
       floors: String(totalFloors).padStart(2, '0'),
@@ -421,7 +422,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
 
   const handleDeleteSpace = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setSpaces(spaces.filter((s) => s.id !== id));
+    setSpaces(spaces.filter((s: { id: string; }) => s.id !== id));
     setActiveMenuId(null);
   };
 
@@ -515,7 +516,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
       "Creation Date"
     ];
 
-    const rows = spaces.map((space) => [
+    const rows = spaces.map((space: { id: any; code: any; title: string; subtitle: string; floorCount: any; roomCount: any; poiCount: any; size: any; quality: any; status: any; latLon: string; createdAt: any; }) => [
       space.id,
       space.code,
       `"${space.title.replace(/"/g, '""')}"`,
@@ -530,7 +531,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
       `"${space.createdAt}"`
     ]);
 
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r: any[]) => r.join(","))].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -605,7 +606,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
   };
 
   const filteredSpaces = spaces.filter(
-    (s) =>
+    (s: { title: string; code: string; subtitle: string; }) =>
       s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.subtitle.toLowerCase().includes(searchQuery.toLowerCase())
@@ -823,7 +824,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
               className="topbar-search-input"
               placeholder="Search coordinates, spaces, POIs..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e: { target: { value: any; }; }) => setSearchQuery(e.target.value)}
             />
           </div>
 
@@ -964,19 +965,19 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                 <div className="pipeline-buttons">
                   <button 
                     className={`pipeline-btn ${captureMethod === 'photos' ? 'active' : ''}`}
-                    onClick={(e) => { e.stopPropagation(); setCaptureMethod('photos'); }}
+                    onClick={(e: { stopPropagation: () => void; }) => { e.stopPropagation(); setCaptureMethod('photos'); }}
                   >
                     📷 Photos
                   </button>
                   <button 
                     className={`pipeline-btn ${captureMethod === 'video' ? 'active' : ''}`}
-                    onClick={(e) => { e.stopPropagation(); setCaptureMethod('video'); }}
+                    onClick={(e: { stopPropagation: () => void; }) => { e.stopPropagation(); setCaptureMethod('video'); }}
                   >
                     📹 Video
                   </button>
                   <button 
                     className={`pipeline-btn ${captureMethod === 'lidar' ? 'active' : ''}`}
-                    onClick={(e) => { e.stopPropagation(); setCaptureMethod('lidar'); }}
+                    onClick={(e: { stopPropagation: () => void; }) => { e.stopPropagation(); setCaptureMethod('lidar'); }}
                   >
                     📡 LiDAR
                   </button>
@@ -989,7 +990,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
             </div>
 
             {/* Recorded Scans from IndexedDB -> Rendered as Processed 3D Digital Twins */}
-            {recordedScanVideos.map((video, index) => {
+            {recordedScanVideos.map((video: { id: string; name: string; size: any; createdAt: string | number | Date; }, index: number) => {
               const mockSpaceItem: StoredSpaceItem = {
                 id: video.id,
                 code: `SPACE_GEN_0${index + 1}`,
@@ -1013,14 +1014,14 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                 <div 
                   className="space-item-card" 
                   key={video.id}
-                  onClick={(e) => handleLaunchGeneratedSpace(video.id, mockSpaceItem, e)}
+                  onClick={(e: any) => handleLaunchGeneratedSpace(video.id, mockSpaceItem, e)}
                 >
                   <div className="space-preview-box">
                     <img
                       src={mockSpaceItem.image}
                       alt={`${mockSpaceItem.title} schematic`}
                       className="space-preview-img"
-                      onError={(e) => {
+                      onError={(e: { target: HTMLElement; }) => {
                         (e.target as HTMLElement).style.display = 'none';
                       }}
                     />
@@ -1042,10 +1043,10 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                       <span className="status-ready-badge"><span className="ready-green-dot" /> {mockSpaceItem.status}</span>
                     </div>
                     <div className="space-card-action-row" style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
-                      <button className="btn-dark-green-split" onClick={(e) => handleGenerate3DMap(video.id, e)}>
+                      <button className="btn-dark-green-split" onClick={(e: any) => handleGenerate3DMap(video.id, e)}>
                         🛠️ GENERATE 3D MAP
                       </button>
-                      <button className="btn-dark-green-split" onClick={(e) => handleLaunchGeneratedSpace(video.id, mockSpaceItem, e)}>
+                      <button className="btn-dark-green-split" onClick={(e: any) => handleLaunchGeneratedSpace(video.id, mockSpaceItem, e)}>
                         🚀 LAUNCH VIEWER
                       </button>
                     </div>
@@ -1055,7 +1056,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
             })}
 
             {/* Stored Space Cards */}
-            {filteredSpaces.map((space) => (
+            {filteredSpaces.map((space: StoredSpaceItem) => (
               <div 
                 className="space-item-card" 
                 key={space.id}
@@ -1067,7 +1068,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                     src={space.image}
                     alt={`${space.title} schematic`}
                     className="space-preview-img"
-                    onError={(e) => {
+                    onError={(e: { target: HTMLElement; }) => {
                       (e.target as HTMLElement).style.display = 'none';
                     }}
                   />
@@ -1085,11 +1086,11 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                 <div className="space-card-body">
                   <div className="space-code-row">
                     <span className="space-code-text">{space.code}</span>
-                    <div className="menu-container" onClick={(e) => e.stopPropagation()}>
+                    <div className="menu-container" onClick={(e: { stopPropagation: () => any; }) => e.stopPropagation()}>
                       <button 
                         className="space-menu-btn" 
                         aria-label="Space options"
-                        onClick={(e) => {
+                        onClick={(e: { stopPropagation: () => void; }) => {
                           e.stopPropagation();
                           setActiveMenuId(activeMenuId === space.id ? null : space.id);
                         }}
@@ -1099,18 +1100,18 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
 
                       {activeMenuId === space.id && (
                         <div className="dropdown-action-menu">
-                          <button onClick={(e) => handleDuplicateSpace(space, e)}>
+                          <button onClick={(e: any) => handleDuplicateSpace(space, e)}>
                             📋 Duplicate Space
                           </button>
-                          <button onClick={(e) => handleExportSingleSpaceExcel(space, e)}>
+                          <button onClick={(e: any) => handleExportSingleSpaceExcel(space, e)}>
                             📊 Export Excel (.csv)
                           </button>
-                          <button onClick={(e) => handleExportSpace(space, e)}>
+                          <button onClick={(e: any) => handleExportSpace(space, e)}>
                             📥 Export Telemetry (.json)
                           </button>
                           <button 
                             className="danger-item" 
-                            onClick={(e) => handleDeleteSpace(space.id, e)}
+                            onClick={(e: any) => handleDeleteSpace(space.id, e)}
                           >
                             🗑️ Delete Space
                           </button>
@@ -1138,7 +1139,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                   <div className="space-card-action-row">
                     <button 
                       className="btn-dark-green-split"
-                      onClick={(e) => {
+                      onClick={(e: { stopPropagation: () => void; }) => {
                         e.stopPropagation();
                         setSelectedSpaceForViewer(space);
                       }}
@@ -1147,7 +1148,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                     </button>
                     <button 
                       className="btn-outline-split"
-                      onClick={(e) => {
+                      onClick={(e: { stopPropagation: () => void; }) => {
                         e.stopPropagation();
                         alert(`Opening ${space.actionText || 'TELEMETRY'} module...`);
                       }}
@@ -1256,7 +1257,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                     className="activity-search-input"
                     placeholder="Filter scans, tags, operators..."
                     value={activitySearch}
-                    onChange={(e) => setActivitySearch(e.target.value)}
+                    onChange={(e: { target: { value: any; }; }) => setActivitySearch(e.target.value)}
                   />
                 </div>
 
@@ -1355,7 +1356,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                           <button 
                             className="btn-table-icon" 
                             title="Export Log to Excel (.csv)"
-                            onClick={(e) => handleExportSingleLogExcel(log, e)}
+                            onClick={(e: any) => handleExportSingleLogExcel(log, e)}
                           >
                             📥
                           </button>
@@ -1402,7 +1403,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
       {/* Initialize Spatial Mapping Protocol Modal */}
       {isCreateModalOpen && (
         <div className="modal-backdrop" onClick={() => setIsCreateModalOpen(false)}>
-          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-container" onClick={(e: { stopPropagation: () => any; }) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title-wrap">
                 <span className="modal-badge">INITIALIZE PROTOCOL</span>
@@ -1421,7 +1422,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                   className="form-input"
                   placeholder="e.g. CYBERNETICS LAB 04"
                   value={newSpaceName}
-                  onChange={(e) => setNewSpaceName(e.target.value)}
+                  onChange={(e: { target: { value: any; }; }) => setNewSpaceName(e.target.value)}
                   autoFocus
                   required
                 />
@@ -1434,7 +1435,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                     type="number"
                     className="form-input font-mono"
                     value={newSpaceFloors}
-                    onChange={(e) => setNewSpaceFloors(e.target.value)}
+                    onChange={(e: { target: { value: any; }; }) => setNewSpaceFloors(e.target.value)}
                     min="1"
                     max="100"
                   />
@@ -1445,7 +1446,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                     type="number"
                     className="form-input font-mono"
                     value={newSpaceRooms}
-                    onChange={(e) => setNewSpaceRooms(e.target.value)}
+                    onChange={(e: { target: { value: any; }; }) => setNewSpaceRooms(e.target.value)}
                     min="1"
                     max="500"
                   />
@@ -1502,7 +1503,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
       {/* 3D Model Viewer Modal or Video Playback Modal */}
       {(selectedSpaceForViewer || activePlaybackUrl) && (
         <div className="modal-backdrop" onClick={() => { setSelectedSpaceForViewer(null); setActivePlaybackUrl(null); }}>
-          <div className="viewer-modal-container" onClick={(e) => e.stopPropagation()}>
+          <div className="viewer-modal-container" onClick={(e: { stopPropagation: () => any; }) => e.stopPropagation()}>
             <div className="viewer-header">
               <div className="viewer-info font-mono">
                 <span className="viewer-code">{selectedSpaceForViewer ? selectedSpaceForViewer.code : 'RECORDED_SCAN'}</span>
@@ -1519,7 +1520,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                 <video src={activePlaybackUrl} controls autoPlay className="viewer-main-img" />
               ) : (
                 <div style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
-                  <ThreeDViewer modelUrl={selectedSpaceForViewer?.modelUrl} videoSrc={selectedSpaceForViewer?.videoUrl} />
+                  <ThreeDViewer modelUrl={selectedSpaceForViewer?.modelUrl} />
                 </div>
               )}
               {selectedSpaceForViewer && (

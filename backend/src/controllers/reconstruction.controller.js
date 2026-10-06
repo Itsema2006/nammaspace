@@ -2,6 +2,7 @@ const Project = require('../models/Project');
 const ReconstructionJob = require('../models/ReconstructionJob');
 const { addReconstructionJob } = require('../services/queue.service');
 const { exists } = require('../services/storage.service');
+const path = require('path');
 
 // @desc    Start reconstruction process
 // @route   POST /api/projects/:id/reconstruct
@@ -46,7 +47,7 @@ const startReconstruction = async (req, res, next) => {
     const job = await ReconstructionJob.create({
       projectId,
       userId,
-      videoPath: project.videoUrl,
+      videoPath: path.resolve(project.videoUrl),
       status: 'queued',
       currentStage: 'queued'
     });
@@ -60,7 +61,8 @@ const startReconstruction = async (req, res, next) => {
     const bullmqJob = await addReconstructionJob({
       projectId: projectId.toString(),
       jobId: job._id.toString(),
-      videoPath: project.videoUrl
+      videoPath: path.resolve(project.videoUrl),
+      outputDir: path.resolve(process.env.OUTPUT_DIR || './outputs')
     });
 
     res.json({
@@ -96,7 +98,9 @@ const getProjectStatus = async (req, res, next) => {
       status: project.status,
       progress: project.progress,
       stage: project.currentStage,
-      modelUrl: project.outputModelUrl || null
+      modelUrl: project.modelUrl || null,
+      previewUrl: project.previewUrl || null,
+      reconstructionMetadata: project.reconstructionMetadata || null
     });
   } catch (error) {
     next(error);
