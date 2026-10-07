@@ -1,34 +1,24 @@
-import { Suspense, useEffect } from 'react';
+import { Suspense, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Environment, Grid, OrbitControls, useGLTF } from '@react-three/drei';
-import * as THREE from 'three';
+import { Environment, Grid, OrbitControls, Splat, useGLTF } from '@react-three/drei';
 
-function ReconstructedScene({ modelUrl }: { modelUrl: string }) {
-  const { scene } = useGLTF(modelUrl);
-
-  useEffect(() => {
-    scene.traverse((object) => {
-      if (object instanceof THREE.Mesh) {
-        object.castShadow = true;
-        object.receiveShadow = true;
-      }
-    });
-  }, [scene]);
-
+function MeshScene({ meshUrl }: { meshUrl: string }) {
+  const { scene } = useGLTF(meshUrl);
   return <primitive object={scene} />;
 }
 
-export default function ThreeDViewer({ modelUrl }: { modelUrl?: string }) {
+export default function ThreeDViewer({ modelUrl, meshUrl }: { modelUrl?: string; meshUrl?: string }) {
+  const [viewMode, setViewMode] = useState<'splat' | 'mesh'>('splat');
+  const showingMesh = viewMode === 'mesh' && Boolean(meshUrl);
+
   return (
     <div style={{ width: '100%', height: '100%', backgroundColor: '#070a0e', position: 'relative' }}>
       {modelUrl ? (
         <Canvas camera={{ position: [8, 6, 8], fov: 45 }} shadows>
           <color attach="background" args={['#070a0e']} />
-          <ambientLight intensity={0.5} />
-          <directionalLight position={[8, 12, 6]} intensity={1.4} castShadow />
           <Suspense fallback={null}>
-            <ReconstructedScene modelUrl={modelUrl} />
-            <Environment preset="city" />
+            {showingMesh && meshUrl ? <MeshScene meshUrl={meshUrl} /> : <Splat src={modelUrl} />}
+            {showingMesh && <Environment preset="city" />}
           </Suspense>
           <Grid infiniteGrid fadeDistance={50} cellColor="#ffffff" sectionColor="#38e5ad" position={[0, -0.1, 0]} />
           <OrbitControls enablePan enableZoom enableRotate makeDefault />
@@ -47,11 +37,22 @@ export default function ThreeDViewer({ modelUrl }: { modelUrl?: string }) {
         zIndex: 2, background: 'rgba(0,0,0,0.5)', padding: 10,
         borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)'
       }}>
-        <div style={{ fontWeight: 700, letterSpacing: 1 }}>● RECONSTRUCTED SCENE</div>
+          <div style={{ fontWeight: 700, letterSpacing: 1 }}>● {showingMesh ? 'TSDF MESH SCENE' : 'GAUSSIAN SPLAT SCENE'}</div>
         <div style={{ marginTop: 4, color: '#fff' }}>
-          RENDER: {modelUrl ? 'GLB / GLTF DIGITAL TWIN' : 'WAITING FOR MESH EXPORT'}
+          RENDER: {modelUrl ? (showingMesh ? 'GEOMETRY / GLB DIGITAL TWIN' : 'REALISTIC SPLAT DIGITAL TWIN') : 'WAITING FOR SPLAT EXPORT'}
         </div>
       </div>
+
+      {modelUrl && (
+        <div style={{ position: 'absolute', top: 20, right: 20, display: 'flex', gap: 6 }}>
+          <button type="button" onClick={() => setViewMode('splat')} style={{ padding: '6px 8px', background: showingMesh ? '#111820' : '#0e8f6a', color: '#fff', border: '1px solid #38e5ad' }}>
+            SPLAT
+          </button>
+          <button type="button" disabled={!meshUrl} onClick={() => setViewMode('mesh')} style={{ padding: '6px 8px', background: showingMesh ? '#0e8f6a' : '#111820', color: '#fff', border: '1px solid #38e5ad', opacity: meshUrl ? 1 : 0.45 }}>
+            MESH
+          </button>
+        </div>
+      )}
     </div>
   );
 }

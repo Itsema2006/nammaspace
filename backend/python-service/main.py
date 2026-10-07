@@ -40,8 +40,6 @@ def processing_pipeline(project_id: str, video_path: str):
     try:
         print(f"[PYTHON] Running COLMAP/Open3D pipeline...")
         asset = reconstruct(video_path, output_dir, project_id)
-        asset["modelUrl"] = f"/reconstruction-assets/projects/{project_id}/reconstruction.glb"
-        asset["pointCloudUrl"] = f"/reconstruction-assets/projects/{project_id}/dense/fused.ply"
         reconstruction_status[project_id] = {"status": "completed", "asset": asset}
         print(f"[PYTHON] Spatial reconstruction complete for project {project_id}")
         

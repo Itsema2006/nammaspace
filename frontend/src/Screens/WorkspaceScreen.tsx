@@ -186,6 +186,8 @@ export interface StoredSpaceItem {
   actionType?: 'telemetry' | 'wayfinding' | 'inspect';
   videoUrl?: string;
   modelUrl?: string;
+  meshUrl?: string;
+  metrics?: ReconstructionMetrics;
 }
 
 const DEFAULT_STORED_SPACES: StoredSpaceItem[] = [
@@ -203,7 +205,7 @@ const DEFAULT_STORED_SPACES: StoredSpaceItem[] = [
     syncTime: '42ms Sync',
     latLon: 'LAT: 12.9716° N • LON: 77.5946° E',
     image: '/assets/research_centre.jpg',
-    quality: '99.4%',
+    quality: 'Not measured',
     createdAt: '2026-09-04',
     actionText: 'TELEMETRY',
     actionType: 'telemetry',
@@ -222,7 +224,7 @@ const DEFAULT_STORED_SPACES: StoredSpaceItem[] = [
     syncTime: '18ms Sync',
     latLon: 'LAT: 13.0827° N • LON: 80.2707° E',
     image: '/assets/logistics_hub.jpg',
-    quality: '97.8%',
+    quality: 'Not measured',
     createdAt: '2026-09-05',
     actionText: 'WAYFINDING',
     actionType: 'wayfinding',
@@ -241,7 +243,7 @@ const DEFAULT_STORED_SPACES: StoredSpaceItem[] = [
     syncTime: '28ms Sync',
     latLon: 'LAT: 17.3850° N • LON: 78.4867° E',
     image: '/assets/tower_hq.jpg',
-    quality: '98.6%',
+    quality: 'Not measured',
     createdAt: '2026-09-07',
     actionText: 'INSPECT CLOUD',
     actionType: 'inspect',
@@ -270,7 +272,7 @@ const INITIAL_ACTIVITY_LOGS: ActivityLogItem[] = [
     operatorName: 'Operator Dev',
     pipeline: '3DGS Reconstructed',
     payloadSize: '1.4 GB',
-    confidence: '99.1%',
+      confidence: 'Measured from source metadata',
     status: 'Completed',
     type: 'scan',
   },
@@ -282,7 +284,7 @@ const INITIAL_ACTIVITY_LOGS: ActivityLogItem[] = [
     operatorName: 'Arch Labs Dot',
     pipeline: 'NeRF Mesh (Instant-NGP)',
     payloadSize: '820 MB',
-    confidence: '97.8%',
+      confidence: 'Pending reconstruction metrics',
     status: 'Completed',
     type: 'scan',
   },
@@ -294,7 +296,7 @@ const INITIAL_ACTIVITY_LOGS: ActivityLogItem[] = [
     operatorName: 'Drone Pilot 09',
     pipeline: 'Gaussian Splatting (3DGS)',
     payloadSize: '2.1 GB',
-    confidence: '98.4%',
+      confidence: 'Not measured',
     status: 'Completed',
     type: 'scan',
   },
@@ -306,7 +308,7 @@ const INITIAL_ACTIVITY_LOGS: ActivityLogItem[] = [
     operatorName: 'Spatial Surveyor Team',
     pipeline: 'Point Cloud Synced (LAS/E57)',
     payloadSize: '3.4 GB',
-    confidence: '96.5%',
+    confidence: 'Not measured',
     status: 'Completed',
     type: 'export',
   },
@@ -317,6 +319,24 @@ const LOCAL_STORAGE_KEY = 'namma_stored_spaces_v5';
 interface WorkspaceScreenProps {
   onNavigateHome?: () => void;
   onNavigateScan?: () => void;
+}
+
+interface ReconstructionAssets {
+  splatUrl: string;
+  meshUrl?: string;
+  metrics: ReconstructionMetrics;
+}
+
+interface ReconstructionMetrics {
+  frameCount: number;
+  registeredCameras: number;
+  registeredPercentage: number;
+  pointCount: number;
+  gaussianCount: number;
+  trainingIterations: number;
+  reprojectionError?: number | null;
+  processingSeconds: number;
+  outputBytes: number;
 }
 
 export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: WorkspaceScreenProps) {
@@ -330,7 +350,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
   // Recorded scans from videoStorage
   const [recordedScanVideos, setRecordedScanVideos] = useState<StoredScanVideo[]>([]);
   const [activePlaybackUrl, setActivePlaybackUrl] = useState<string | null>(null);
-  const [reconstructedModels, setReconstructedModels] = useState<Record<string, string>>({});
+  const [reconstructedModels, setReconstructedModels] = useState<Record<string, ReconstructionAssets>>({});
 
   // Form states for creating new space
   const [newSpaceName, setNewSpaceName] = useState('');
@@ -385,7 +405,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
       activeSpaces: String(totalSpaces).padStart(2, '0'),
       floors: String(totalFloors).padStart(2, '0'),
       pois: totalPOIs,
-      avgQuality: '98.2%',
+      trainedSplatRuns: spaces.filter((space) => Boolean(space.modelUrl)).length,
     };
   }, [spaces, recordedScanVideos]);
 
@@ -410,7 +430,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
       syncTime: '24ms Sync',
       latLon: `LAT: ${(12 + Math.random()).toFixed(4)}° N • LON: ${(77 + Math.random()).toFixed(4)}° E`,
       image: captureMethod === 'photos' ? '/assets/research_centre.jpg' : captureMethod === 'video' ? '/assets/logistics_hub.jpg' : '/assets/tower_hq.jpg',
-      quality: '98.9%',
+      quality: 'Not measured',
       createdAt: new Date().toISOString().split('T')[0],
       actionText: 'TELEMETRY',
       actionType: 'telemetry',
@@ -585,7 +605,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
       
       const formData = new FormData();
       formData.append('project_id', videoId);
-      formData.append('video', blob, 'recorded_video.mp4');
+      formData.append('video', blob, 'recorded_video.webm');
 
       alert("3D reconstruction started. This can take several minutes.");
 
@@ -604,8 +624,14 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
           status = statusData.status;
 
           if (status === 'completed' && statusData.asset?.modelUrl) {
-            const modelUrl = new URL(statusData.asset.modelUrl, window.location.origin).toString();
-            setReconstructedModels((models) => ({ ...models, [videoId]: modelUrl }));
+            const assets = {
+              splatUrl: new URL(statusData.asset.modelUrl, window.location.origin).toString(),
+              meshUrl: statusData.asset.meshUrl
+                ? new URL(statusData.asset.meshUrl, window.location.origin).toString()
+                : undefined,
+              metrics: statusData.asset.metadata,
+            };
+            setReconstructedModels((models) => ({ ...models, [videoId]: assets }));
             alert("3D reconstruction complete. Launch the reconstructed scene.");
             return;
           }
@@ -619,7 +645,12 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
       }
     } catch (error) {
       console.error("Error generating 3D map", error);
-      alert("Error connecting to backend for 3D reconstruction");
+      const message = error instanceof Error ? error.message : 'Unknown reconstruction error';
+      if (message.includes('At least two video frames')) {
+        alert('The scan recording is too short or could not be decoded. Record at least 2 seconds of video and try again.');
+      } else {
+        alert(`3D reconstruction failed: ${message}`);
+      }
     }
   };
 
@@ -933,7 +964,7 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                 </div>
                 <div className="metric-badge green-soft-badge">
                   <span className="badge-icon">✓</span>
-                  <strong>{metrics.avgQuality}</strong> AVG RECONSTRUCTION QUALITY
+                  <strong>{metrics.trainedSplatRuns}</strong> TRAINED SPLAT RUNS
                 </div>
                 <div className="metric-badge outline-badge">
                   <span className="badge-icon">⚙</span>
@@ -1018,15 +1049,19 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                 roomCount: 1,
                 poiCount: Math.floor(Math.random() * 5) + 2,
                 size: `${(((video.size || 0) / 1024 / 1024) * 1.5).toFixed(1)} MB`,
-                status: reconstructedModels[video.id] ? '3D MESH READY' : 'RECONSTRUCTION REQUIRED',
+                status: reconstructedModels[video.id] ? 'SPLAT + MESH READY' : 'RECONSTRUCTION REQUIRED',
                 syncTime: 'Local Processed',
                 latLon: `LAT: 12.9487° N • LON: 77.3220° E`,
                 image: '/assets/research_centre.jpg', // Placeholder for card thumbnail
-                quality: '99.1%',
+                quality: reconstructedModels[video.id]
+                  ? `${reconstructedModels[video.id].metrics.registeredPercentage}% CAMERAS REGISTERED`
+                  : 'METRICS PENDING',
                 createdAt: new Date(video.createdAt).toISOString().split('T')[0],
                 actionText: 'TELEMETRY',
                 actionType: 'telemetry',
-                modelUrl: reconstructedModels[video.id],
+                modelUrl: reconstructedModels[video.id]?.splatUrl,
+                meshUrl: reconstructedModels[video.id]?.meshUrl,
+                metrics: reconstructedModels[video.id]?.metrics,
               };
 
               return (
@@ -1539,14 +1574,24 @@ export default function WorkspaceScreen({ onNavigateHome, onNavigateScan }: Work
                 <video src={activePlaybackUrl} controls autoPlay className="viewer-main-img" />
               ) : (
                 <div style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
-                  <ThreeDViewer modelUrl={selectedSpaceForViewer?.modelUrl} />
+                  <ThreeDViewer
+                    modelUrl={selectedSpaceForViewer?.modelUrl}
+                    meshUrl={selectedSpaceForViewer?.meshUrl}
+                  />
                 </div>
               )}
               {selectedSpaceForViewer && (
                 <div className="viewer-overlay-hud font-mono">
-                  <div className="hud-line">RECONSTRUCTION QUALITY: {selectedSpaceForViewer.quality}</div>
-                  <div className="hud-line">FLOORS: {selectedSpaceForViewer.floorCount} | ROOMS: {selectedSpaceForViewer.roomCount} | POIs: {selectedSpaceForViewer.poiCount}</div>
-                  <div className="hud-line">{selectedSpaceForViewer.latLon}</div>
+                  {selectedSpaceForViewer.metrics ? (
+                    <>
+                      <div className="hud-line">FRAMES: {selectedSpaceForViewer.metrics.frameCount} | REGISTERED: {selectedSpaceForViewer.metrics.registeredPercentage}%</div>
+                      <div className="hud-line">POINTS: {selectedSpaceForViewer.metrics.pointCount} | GAUSSIANS: {selectedSpaceForViewer.metrics.gaussianCount}</div>
+                      <div className="hud-line">ITERATIONS: {selectedSpaceForViewer.metrics.trainingIterations} | REPROJECTION: {selectedSpaceForViewer.metrics.reprojectionError?.toFixed(3) ?? 'N/A'}</div>
+                      <div className="hud-line">PROCESSING: {selectedSpaceForViewer.metrics.processingSeconds}s | OUTPUT: {(selectedSpaceForViewer.metrics.outputBytes / 1024 / 1024).toFixed(1)} MB</div>
+                    </>
+                  ) : (
+                    <div className="hud-line">RECONSTRUCTION METRICS PENDING</div>
+                  )}
                 </div>
               )}
             </div>
